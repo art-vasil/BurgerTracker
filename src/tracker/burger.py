@@ -4,7 +4,7 @@ import cv2
 
 from src.detector.burger import BurgerDetector
 from src.tracker.nms import non_max_suppression_slow
-from settings import WEB_CAM, VIDEO_PATH
+from settings import IP_CAM_ADDRESS, VIDEO_PATH
 
 
 class BurgerTracker:
@@ -36,8 +36,8 @@ class BurgerTracker:
             return False
 
     def run(self, video_file=VIDEO_PATH):
-        if WEB_CAM:
-            cap = cv2.VideoCapture(0)
+        if video_file == "":
+            cap = cv2.VideoCapture(IP_CAM_ADDRESS)
         else:
             cap = cv2.VideoCapture(video_file)
         detect_ret = False

@@ -11,5 +11,5 @@ OVERLAP_THRESH = 0.1
 TPU = True
 LOCAL = False
 
-WEB_CAM = True
+IP_CAM_ADDRESS = True
 VIDEO_PATH = ""
