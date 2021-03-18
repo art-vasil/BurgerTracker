@@ -40,6 +40,9 @@ which is necessary to support real-time processPi.
     Please navigate to this project directory and run the following command in the terminal.
     
     ```
+        echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+        sudo apt-get update
         sudo apt-get install libedgetpu1-std
         pip3 install --extra-index-url https://google-coral.github.io/py-repo/ tflite_runtime
         pip3 install -r requirements.txt
