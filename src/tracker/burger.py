@@ -30,7 +30,7 @@ class BurgerTracker:
         cheese_area = 0
         for cnt in contours:
             cheese_area += cv2.contourArea(cnt)
-        if cheese_area > 0.1 * r_height * r_width:
+        if cheese_area > 0.2 * r_height * r_width:
             return True
         else:
             return False
@@ -40,87 +40,108 @@ class BurgerTracker:
             cap = cv2.VideoCapture(IP_CAM_ADDRESS)
         else:
             cap = cv2.VideoCapture(video_file)
-        detect_ret = False
-        detect_cnt = 0
-        pick_ret = False
-        pick_cnt = 0
-        end_ret = False
-        end_cnt = 0
+        # detect_ret = False
+        # detect_cnt = 0
+        # pick_ret = False
+        # pick_cnt = 0
+        # end_ret = False
+        # end_cnt = 0
         while cap.isOpened():
             _, frame = cap.read()
-            burgers, burger_classes, _ = self.burger_detector.detect_burger(frame=frame)
-            filter_ids = non_max_suppression_slow(boxes=np.array(burgers), keys=range(len(burgers)))
+            n_burgers, burger_classes, _ = self.burger_detector.detect_burger(frame=frame)
+            filter_ids = non_max_suppression_slow(boxes=np.array(n_burgers), keys=range(len(n_burgers)))
             for idx in filter_ids:
-                burgers.pop(idx)
-            if self.tracking_ret is None:
-                if all(x == "init" for x in burger_classes):
-                    detect_ret = True
-                    for new_burger in burgers:
-                        left, top, right, bottom = new_burger
-                        ret = False
-                        for i, pre_burger in enumerate(self.burgers):
-                            p_left, p_top, p_right, p_bottom = pre_burger
-                            overlapped = non_max_suppression_slow(
-                                boxes=np.array([[left, top, right, bottom], [p_left, p_top, p_right, p_bottom]]),
-                                keys=[0, 1])
-                            if overlapped:
-                                ret = True
-                                break
-                        if not ret:
-                            self.burgers.append(new_burger)
-                            self.burger_attributes.append({"Start_Time": time.time()})
-            if detect_ret and len(burgers) == 0:
-                detect_cnt += 1
-                if detect_cnt > 100:
-                    if len(self.burgers) < 5:
-                        self.burgers = []
-                    else:
-                        print("[INFO] Detecting Burger Finished")
-                        detect_ret = False
-                        detect_cnt = 0
-                        self.tracking_ret = "Detect"
-            if self.tracking_ret == "Detect":
-                if burger_classes == ["pick"]:
-                    pi_left, pi_top, pi_right, pi_bottom = burgers[0]
-                    pi_x = 0.5 * (pi_right + pi_left)
-                    pi_y = pi_top + 0.8 * (pi_bottom - pi_top)
+                n_burgers.pop(idx)
+                burger_classes.pop(idx)
+            # detect_ret = True
+            for new_burger, new_burger_class in zip(n_burgers, burger_classes):
+                if new_burger_class == "init":
+                    left, top, right, bottom = new_burger
+                    ret = False
                     for i, pre_burger in enumerate(self.burgers):
-                        pre_left, pre_top, pre_right, pre_bottom = pre_burger
-                        if pre_left <= pi_x <= pre_right and pre_top <= pi_y <= pre_bottom:
-                            if time.time() - self.burger_attributes[i]["Start_Time"] < 50:
-                                break
-                            self.burger_attributes[i].update({"Pick_Time": time.time()})
-                            pick_ret = True
-            if pick_ret and len(burgers) != 0:
-                pick_cnt = 0
-            if pick_ret and len(burgers) == 0:
-                pick_cnt += 1
-                if pick_cnt > 500:
-                    for i, burger_attr in enumerate(self.burger_attributes):
-                        if "Pick_Time" not in list(burger_attr.keys()):
-                            if i < len(self.burger_attributes) - 1:
-                                self.burger_attributes[i].update(
-                                    {"Pick_Time": 0.5 * (self.burger_attributes[i - 1]["Pick_Time"] +
-                                                         self.burger_attributes[i + 1]["Pick_Time"])})
-                            else:
-                                self.burger_attributes[i].update(
-                                    {"Pick_Time": self.burger_attributes[i - 1]["Pick_Time"]})
-                    print("[INFO] Picking Burger Finished")
-                    pick_ret = False
-                    pick_cnt = 0
-                    self.tracking_ret = "Pick"
-            if self.tracking_ret == "Pick":
+                        p_left, p_top, p_right, p_bottom = pre_burger
+                        overlapped = non_max_suppression_slow(
+                            boxes=np.array([[left, top, right, bottom], [p_left, p_top, p_right, p_bottom]]),
+                            keys=[0, 1])
+                        if overlapped:
+                            ret = True
+                            break
+                    if not ret:
+                        self.burgers.append(new_burger)
+                        self.burger_attributes.append({"Start_Time": time.time()})
+            # if detect_ret and len(burgers) == 0:
+            #     detect_cnt += 1
+            #     if detect_cnt > 100:
+            #         if len(self.burgers) < 5:
+            #             self.burgers = []
+            #         else:
+            #             print("[INFO] Detecting Burger Finished")
+            #             detect_ret = False
+            #             detect_cnt = 0
+            #             self.tracking_ret = "Detect"
+            # if self.tracking_ret == "Detect":
+            if burger_classes == ["pick"]:
+                pi_left, pi_top, pi_right, pi_bottom = n_burgers[0]
+                pi_x = 0.5 * (pi_right + pi_left)
+                pi_y = pi_top + 0.8 * (pi_bottom - pi_top)
                 for i, pre_burger in enumerate(self.burgers):
                     pre_left, pre_top, pre_right, pre_bottom = pre_burger
+                    if pre_left <= pi_x <= pre_right and pre_top <= pi_y <= pre_bottom:
+                        if time.time() - self.burger_attributes[i]["Start_Time"] < 50:
+                            continue
+                        self.burger_attributes[i].update({"Pick_Time": time.time()})
+                        # pick_ret = True
+            for i, pre_burger_attr in enumerate(self.burger_attributes):
+                if i < len(self.burger_attributes) - 1:
+                    if abs(self.burger_attributes[i + 1]["Start_Time"] - pre_burger_attr["Start_Time"]) < 20 and \
+                            "Pick_Time" not in list(pre_burger_attr.keys()) and \
+                            "Pick_Time" in list(self.burger_attributes[i + 1].keys()):
+                        self.burger_attributes[i].update({"Pick_Time": self.burger_attributes[i + 1]["Pick_Time"] - 1})
+                else:
+                    if abs(self.burger_attributes[i - 1]["Start_Time"] - pre_burger_attr["Start_Time"]) < 20 and \
+                            "Pick_Time" not in list(pre_burger_attr.keys()) and \
+                            "Pick_Time" in list(self.burger_attributes[i - 1].keys()):
+                        self.burger_attributes[i].update({"Pick_Time": self.burger_attributes[i - 1]["Pick_Time"] + 1})
+
+            # if pick_ret and len(burgers) != 0:
+            #     pick_cnt = 0
+            # if pick_ret and len(burgers) == 0:
+            #     pick_cnt += 1
+            #     if pick_cnt > 500:
+            #         for i, burger_attr in enumerate(self.burger_attributes):
+            #             if "Pick_Time" not in list(burger_attr.keys()):
+            #                 if i < len(self.burger_attributes) - 1:
+            #                     self.burger_attributes[i].update(
+            #                         {"Pick_Time": 0.5 * (self.burger_attributes[i - 1]["Pick_Time"] +
+            #                                              self.burger_attributes[i + 1]["Pick_Time"])})
+            #                 else:
+            #                     self.burger_attributes[i].update(
+            #                         {"Pick_Time": self.burger_attributes[i - 1]["Pick_Time"]})
+            #         print("[INFO] Picking Burger Finished")
+            #         pick_ret = False
+            #         pick_cnt = 0
+            #         self.tracking_ret = "Pick"
+            # if self.tracking_ret == "Pick":
+            pop_idx = []
+            for i, pre_burger in enumerate(self.burgers):
+                pre_left, pre_top, pre_right, pre_bottom = pre_burger
+                if "Pick_Time" in list(self.burger_attributes[i].keys()):
                     if self.detect_cheese(roi_frame=frame[pre_top:pre_bottom, pre_left:pre_right]):
-                        if "End_Time" not in list(self.burger_attributes[i].keys()):
+                        if "End_Time" not in list(self.burger_attributes[i].keys()) and \
+                                time.time() - self.burger_attributes[i]["Pick_Time"] > 60:
                             self.burger_attributes[i].update({"End_Time": time.time()})
 
             for i, s_burger in enumerate(self.burgers):
-                if "End_Time" not in list(self.burger_attributes[i].keys()):
-                    end_ret = False
-                else:
-                    end_ret = True
+                if "End_Time" in list(self.burger_attributes[i].keys()):
+                    if time.time() - self.burger_attributes[i]["End_Time"] > 20:
+                        pop_idx.append(i)
+                if time.time() - self.burger_attributes[i]["Start_Time"] > 200 and \
+                        "Pick_Time" not in list(self.burger_attributes[i].keys()):
+                    pop_idx.append(i)
+                # if "End_Time" not in list(self.burger_attributes[i].keys()):
+                #     end_ret = False
+                # else:
+                #     end_ret = True
                 if "Pick_Time" not in list(self.burger_attributes[i].keys()):
                     front_time = time.time() - self.burger_attributes[i]["Start_Time"]
                     cv2.circle(frame, (int(0.5 * (s_burger[0] + s_burger[2])), int(0.5 * (s_burger[1] + s_burger[3]))),
@@ -144,15 +165,22 @@ class BurgerTracker:
                             (int(0.5 * (s_burger[0] + s_burger[2])), int(0.5 * (s_burger[1] + s_burger[3])) - 35),
                             cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 2)
 
-            if end_ret and self.tracking_ret == "Pick":
-                end_cnt += 1
-                if end_cnt > 500:
-                    print("[INFO] Cooking Burger Finished")
-                    self.tracking_ret = None
-                    self.burgers = []
-                    self.burger_attributes = []
-                    end_cnt = 0
-                    end_ret = False
+            pop_idx = sorted(pop_idx, reverse=True)
+            for p_idx in pop_idx:
+                print(self.burgers)
+                print(self.burger_attributes)
+                self.burger_attributes.pop(p_idx)
+                self.burgers.pop(p_idx)
+
+            # if end_ret and self.tracking_ret == "Pick":
+            #     end_cnt += 1
+            #     if end_cnt > 500:
+            #         print("[INFO] Cooking Burger Finished")
+            #         self.tracking_ret = None
+            #         self.burgers = []
+            #         self.burger_attributes = []
+            #         end_cnt = 0
+            #         end_ret = False
 
             cv2.imshow("Hamburger", cv2.resize(frame, None, fx=0.5, fy=0.5))
             if cv2.waitKey(1) & 0xff == ord('q'):

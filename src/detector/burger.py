@@ -72,8 +72,8 @@ class BurgerDetector:
                 detected_classes.append(object_name)
                 # if object_name == "init":
                 #     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
-                # elif object_name == "pick":
-                #     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+                if object_name == "pick":
+                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
                 # Draw label
                 # Look up object name from "labels" array using class index
                 # label = '%s: %d%%' % (object_name, int(scores[i] * 100))  # Example: 'person: 72%'
