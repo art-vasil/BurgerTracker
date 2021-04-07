@@ -6,7 +6,7 @@ MODEL_DIR = os.path.join(CUR_DIR, 'utils', 'model')
 THRESHOLD = 0.8
 INPUT_MEAN = 127.5
 INPUT_STD = 127.5
-OVERLAP_THRESH = 0.1
+OVERLAP_THRESH = 0.2
 
 TPU = True
 LOCAL = False

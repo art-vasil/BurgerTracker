@@ -5,7 +5,7 @@ import numpy as np
 import importlib.util
 
 # from utils.folder_file_manager import log_print
-from settings import MODEL_DIR, TPU, INPUT_STD, INPUT_MEAN, THRESHOLD
+from settings import MODEL_DIR, TPU, INPUT_STD, INPUT_MEAN, THRESHOLD, IP_CAM_ADDRESS
 
 
 pkg = importlib.util.find_spec('tflite_runtime')
@@ -60,7 +60,7 @@ class BurgerDetector:
         detected_boxes = []
         detected_classes = []
         for i in range(len(scores)):
-            if (scores[i] > THRESHOLD) and (scores[i] <= 1.0):
+            if scores[i] > THRESHOLD:
                 # Get bounding box coordinates and draw box Interpreter can return coordinates that are outside
                 # of image dimensions, need to force them to be within image using max() and min()
                 y_min = int(max(1, (boxes[i][0] * im_h)))
@@ -72,8 +72,8 @@ class BurgerDetector:
                 detected_classes.append(object_name)
                 # if object_name == "init":
                 #     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
-                if object_name == "pick":
-                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+                # if object_name == "pick":
+                #     cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
                 # Draw label
                 # Look up object name from "labels" array using class index
                 # label = '%s: %d%%' % (object_name, int(scores[i] * 100))  # Example: 'person: 72%'
@@ -93,7 +93,7 @@ class BurgerDetector:
 
 if __name__ == '__main__':
     burger_detector = BurgerDetector()
-    cap = cv2.VideoCapture("")
+    cap = cv2.VideoCapture(IP_CAM_ADDRESS)
     while cap.isOpened():
         _, frame_ = cap.read()
         h, w = frame_.shape[:2]
