@@ -113,6 +113,9 @@ class BurgerTracker:
                     if pre_left <= pi_x <= pre_right and pre_top <= pi_y <= pre_bottom:
                         if time.time() - self.burger_attributes[i]["Start_Time"] < 50:
                             continue
+                        if "Pick_Time" in self.burger_attributes[i].keys():
+                            if time.time() - self.burger_attributes[i]["Pick_Time"] > 50:
+                                continue
                         self.burger_attributes[i].update({"Pick_Time": time.time()})
                         # pick_ret = True
             for i, pre_burger_attr in enumerate(self.burger_attributes):
