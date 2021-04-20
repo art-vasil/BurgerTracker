@@ -43,7 +43,7 @@ class BurgerTracker:
         cheese_area = 0
         for cnt in contours:
             cheese_area += cv2.contourArea(cnt)
-        if cheese_area > 0.2 * r_height * r_width:
+        if cheese_area > 0.1 * r_height * r_width:
             return True
         else:
             return False
@@ -64,9 +64,10 @@ class BurgerTracker:
         while cap.isOpened():
             _, frame = cap.read()
             height, width = frame.shape[:2]
+            sub_frame = frame[int(pane_y * height):, int(pane_x * width):]
             # cv2.line(frame, (0, int(0.3 * height)), (width, int(0.3 * height)), (0, 0, 255), 5)
             # cv2.line(frame, (int(0.55 * width), 0), (int(0.55 * width), height), (0, 0, 255), 5)
-            n_burgers, burger_classes, _ = self.burger_detector.detect_burger(frame=frame)
+            n_burgers, burger_classes, _ = self.burger_detector.detect_burger(frame=sub_frame)
             filter_ids = non_max_suppression_slow(boxes=np.array(n_burgers), keys=range(len(n_burgers)))
             for idx in filter_ids:
                 n_burgers.pop(idx)
@@ -77,8 +78,6 @@ class BurgerTracker:
             for new_burger, new_burger_class in zip(n_burgers, burger_classes):
                 if new_burger_class == "init":
                     left, top, right, bottom = new_burger
-                    if 0.5 * (left + right) < pane_x * width or 0.5 * (top + bottom) < pane_y * height:
-                        continue
                     ret = False
                     for i, pre_burger in enumerate(self.burgers):
                         p_left, p_top, p_right, p_bottom = pre_burger
@@ -151,7 +150,7 @@ class BurgerTracker:
             for i, pre_burger in enumerate(self.burgers):
                 pre_left, pre_top, pre_right, pre_bottom = pre_burger
                 if "Pick_Time" in list(self.burger_attributes[i].keys()):
-                    if self.detect_cheese_burger_color(roi_frame=frame[pre_top:pre_bottom, pre_left:pre_right]):
+                    if self.detect_cheese_burger_color(roi_frame=sub_frame[pre_top:pre_bottom, pre_left:pre_right]):
                         if "End_Time" not in list(self.burger_attributes[i].keys()) and \
                                 time.time() - self.burger_attributes[i]["Pick_Time"] > 60:
                             self.burger_attributes[i].update({"End_Time": time.time()})
@@ -176,11 +175,11 @@ class BurgerTracker:
                         "Pick_Time" not in list(self.burger_attributes[i].keys()):
                     if i not in pop_idx:
                         pop_idx.append(i)
-                if time.time() - self.burger_attributes[i]["Start_Time"] > 300:
+                if time.time() - self.burger_attributes[i]["Start_Time"] > 360:
                     if i not in pop_idx:
                         pop_idx.append(i)
                 if time.time() - self.burger_attributes[i]["Start_Time"] > 5 and \
-                        self.burger_attributes[i]["Detect_Count"] < 20:
+                        self.burger_attributes[i]["Detect_Count"] < 5:
                     if i not in pop_idx:
                         pop_idx.append(i)
                 # s_left, s_top, s_right, s_bottom = s_burger
@@ -197,16 +196,16 @@ class BurgerTracker:
                 self.burger_attributes.pop(p_idx)
                 self.burgers.pop(p_idx)
             for i, s_burger in enumerate(self.burgers):
-                if self.burger_attributes[i]["Detect_Count"] >= 20:
+                if self.burger_attributes[i]["Detect_Count"] >= 5:
                     if "Pick_Time" not in list(self.burger_attributes[i].keys()):
                         front_time = time.time() - self.burger_attributes[i]["Start_Time"]
-                        cv2.circle(frame, (int(0.5 * (s_burger[0] + s_burger[2])),
-                                           int(0.5 * (s_burger[1] + s_burger[3]))),
+                        cv2.circle(frame, (int(0.5 * (s_burger[0] + s_burger[2])) + int(pane_x * width),
+                                           int(0.5 * (s_burger[1] + s_burger[3]) + pane_y * height)),
                                    20, (151, 142, 255), -1)
                     else:
                         front_time = self.burger_attributes[i]["Pick_Time"] - self.burger_attributes[i]["Start_Time"]
-                        cv2.circle(frame, (int(0.5 * (s_burger[0] + s_burger[2])),
-                                           int(0.5 * (s_burger[1] + s_burger[3]))),
+                        cv2.circle(frame, (int(0.5 * (s_burger[0] + s_burger[2])) + int(pane_x * width),
+                                           int(0.5 * (s_burger[1] + s_burger[3]) + pane_y * height)),
                                    20, (139, 245, 255), -1)
                         if "End_Time" not in list(self.burger_attributes[i].keys()):
                             back_time = time.time() - self.burger_attributes[i]["Pick_Time"]
@@ -215,13 +214,14 @@ class BurgerTracker:
                         back_sec = int(back_time % 60)
                         back_min = int(back_time // 60)
                         cv2.putText(frame, f"{back_min}:{back_sec}",
-                                    (int(0.5 * (s_burger[0] + s_burger[2])),
-                                     int(0.5 * (s_burger[1] + s_burger[3])) - 7),
+                                    (int(0.5 * (s_burger[0] + s_burger[2])) + int(pane_x * width),
+                                     int(0.5 * (s_burger[1] + s_burger[3])) - 7 + int(pane_y * height)),
                                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
                     front_sec = int(front_time % 60)
                     front_min = int(front_time // 60)
                     cv2.putText(frame, f"{front_min}:{front_sec}",
-                                (int(0.5 * (s_burger[0] + s_burger[2])), int(0.5 * (s_burger[1] + s_burger[3])) - 35),
+                                (int(0.5 * (s_burger[0] + s_burger[2]) + pane_x * width),
+                                 int(0.5 * (s_burger[1] + s_burger[3]) - 35 + pane_y * height)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 2)
 
             # if end_ret and self.tracking_ret == "Pick":

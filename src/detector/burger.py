@@ -23,10 +23,10 @@ class BurgerDetector:
     def __init__(self):
         if TPU:
             self.interpreter = Interpreter(model_path=os.path.join(MODEL_DIR,
-                                                                   'burger_quantized_edgetpu.tflite'),
+                                                                   'burger_quantized_edgetpu_v2.tflite'),
                                            experimental_delegates=[load_delegate('libedgetpu.so.1.0')])
         else:
-            self.interpreter = Interpreter(model_path=os.path.join(MODEL_DIR, 'burger_quantized.tflite'))
+            self.interpreter = Interpreter(model_path=os.path.join(MODEL_DIR, 'burger_quantized_v2.tflite'))
         self.interpreter.allocate_tensors()
         self.input_details = self.interpreter.get_input_details()
         self.output_details = self.interpreter.get_output_details()
