@@ -5,7 +5,7 @@ import numpy as np
 import importlib.util
 
 # from utils.folder_file_manager import log_print
-from settings import MODEL_DIR, TPU, INPUT_STD, INPUT_MEAN, THRESHOLD, IP_CAM_ADDRESS
+from settings import MODEL_DIR, TPU, INPUT_STD, INPUT_MEAN, INIT_THRESHOLD, IP_CAM_ADDRESS, FLIP_THRESHOLD
 
 
 pkg = importlib.util.find_spec('tflite_runtime')
@@ -59,8 +59,12 @@ class BurgerDetector:
         scores = self.interpreter.get_tensor(self.output_details[2]['index'])[0]
         detected_boxes = []
         detected_classes = []
-        for i in range(len(scores)):
-            if scores[i] > THRESHOLD:
+        if 1.0 in classes:
+            threshold = FLIP_THRESHOLD
+        else:
+            threshold = INIT_THRESHOLD
+        for i, score in enumerate(scores):
+            if score > threshold:
                 # Get bounding box coordinates and draw box Interpreter can return coordinates that are outside
                 # of image dimensions, need to force them to be within image using max() and min()
                 y_min = int(max(1, (boxes[i][0] * im_h)))
