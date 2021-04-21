@@ -69,13 +69,16 @@ class BurgerTracker:
             # cv2.line(frame, (int(0.55 * width), 0), (int(0.55 * width), height), (0, 0, 255), 5)
             n_burgers, burger_classes, _ = self.burger_detector.detect_burger(frame=sub_frame)
             filter_ids = non_max_suppression_slow(boxes=np.array(n_burgers), keys=range(len(n_burgers)))
-            for idx in filter_ids:
-                n_burgers.pop(idx)
-                burger_classes.pop(idx)
+            new_burgers = []
+            new_burger_classes = []
+            for idx, n_burger in enumerate(n_burgers):
+                if idx not in filter_ids:
+                    new_burgers.append(n_burger)
+                    new_burger_classes.append(burger_classes[idx])
             # detect_ret = True
             # if len(n_burgers) != 0:
             #     print(f"[INFO] New detected: {len(n_burgers)}")
-            for new_burger, new_burger_class in zip(n_burgers, burger_classes):
+            for new_burger, new_burger_class in zip(new_burgers, new_burger_classes):
                 if new_burger_class == "init":
                     left, top, right, bottom = new_burger
                     ret = False
